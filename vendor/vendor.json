@@ -1,0 +1,11 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"path": "github.com/drone/drone-plugin-go/plugin",
+			"revision": "5890a2bbba26198cbfe776d5f5d1691958fbd8ed",
+			"revisionTime": "2015-10-27T14:03:37-07:00"
+		}
+	]
+}
