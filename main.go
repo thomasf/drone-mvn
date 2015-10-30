@@ -29,6 +29,7 @@ type Maven struct {
 
 	workspacePath string
 	artifacts     map[string][]Artifact
+	quiet         bool
 }
 
 // Debug enabled verbose logging
@@ -86,6 +87,7 @@ func main() {
 var (
 	errRequiredValue = errors.New("required")
 	errInvalidValue  = errors.New("invalid")
+	errNotFound      = errors.New("not found")
 )
 
 func publish(mvn *Maven, workspacePath string) error {
@@ -116,7 +118,9 @@ func publish(mvn *Maven, workspacePath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("$", settings)
+	if !mvn.quiet {
+		fmt.Println("$", settings)
+	}
 	defer func() {
 		os.Remove(settings)
 	}()
@@ -132,14 +136,15 @@ func publish(mvn *Maven, workspacePath string) error {
 	}
 
 	for _, cmd := range commands {
-		trace(cmd)
+		if !mvn.quiet {
+			trace(cmd)
+		}
 
 		// run the command and exit if failed.
 		err = cmd.Run()
 		if err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
@@ -202,38 +207,45 @@ func (m *Maven) parseSources() error {
 			}
 
 		}
-
-		// partition parsed artifacts into a map
-		mapped := make(map[string][]Artifact, 0)
-		mapkey := func(a Artifact) string {
-			return fmt.Sprintf("%s:%s:%s", a.GroupID, a.ArtifactID, a.Version)
+		if len(parsed) == 0 {
+			return errNotFound
 		}
-		fill := func(orig Artifact) Artifact {
-			a := orig
-			if a.GroupID == "" {
-				a.GroupID = m.Artifact.GroupID
-			}
-			if a.Version == "" {
-				a.Version = m.Artifact.Version
-			}
-			if a.ArtifactID == "" {
-				a.ArtifactID = m.Artifact.ArtifactID
-			}
-			return a
-		}
-		for _, v := range parsed {
-			filled := fill(v)
-			key := mapkey(filled)
-			var artifacts []Artifact
-			if _, ok := mapped[key]; ok {
-				artifacts = mapped[key]
-			}
-			artifacts = append(artifacts, filled)
-			mapped[key] = artifacts
-		}
-
-		m.artifacts = mapped
 	}
+
+	// partition parsed artifacts into a map
+	mapped := make(map[string][]Artifact, 0)
+	mapkey := func(a Artifact) string {
+		return fmt.Sprintf("%s:%s:%s", a.GroupID, a.ArtifactID, a.Version)
+	}
+	fill := func(orig Artifact) Artifact {
+		a := orig
+		if a.GroupID == "" {
+			a.GroupID = m.Artifact.GroupID
+		}
+		if a.Version == "" {
+			a.Version = m.Artifact.Version
+		}
+		if a.ArtifactID == "" {
+			a.ArtifactID = m.Artifact.ArtifactID
+		}
+		return a
+	}
+	for _, v := range parsed {
+		filled := fill(v)
+		key := mapkey(filled)
+		var artifacts []Artifact
+		if _, ok := mapped[key]; ok {
+			artifacts = mapped[key]
+		}
+		artifacts = append(artifacts, filled)
+		mapped[key] = artifacts
+	}
+
+	if len(mapped) == 0 {
+		return errNotFound
+	}
+
+	m.artifacts = mapped
 
 	return nil
 }
@@ -244,7 +256,7 @@ func command(settingspath string, repo Repository, gpg GPG, artifacts ...Artifac
 
 	var args []string
 	if Debug {
-		args = append(args, "-X")
+		// args = append(args, "-X")
 	} else {
 		args = append(args, "-q")
 	}
@@ -254,6 +266,7 @@ func command(settingspath string, repo Repository, gpg GPG, artifacts ...Artifac
 	)
 
 	if gpg.PrivateKey != "" {
+
 		fmt.Println("WARNING: GPG signing is not yet implmented")
 		args = append(args,
 			mavenGpg,
@@ -291,7 +304,6 @@ func command(settingspath string, repo Repository, gpg GPG, artifacts ...Artifac
 		args = append(args, fmt.Sprintf("-Dclassifiers=%s", strings.Join(classifiers, ",")))
 		args = append(args, fmt.Sprintf("-Dtypes=%s", strings.Join(types, ",")))
 	}
-
 	return exec.Command("mvn", args...)
 }
 
@@ -349,6 +361,7 @@ func m2Settings(m Maven) (string, error) {
 		os.Remove(f.Name())
 		return "", err
 	}
+
 	f.Close()
 	return f.Name(), nil
 
