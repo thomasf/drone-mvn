@@ -31,9 +31,9 @@ func (g *GpgCmd) Setup() error {
 	g.PublicRing = filepath.Join(tmpdir, "public.gpg")
 	err = g.importKeys()
 	if err != nil {
+		g.Teardown()
 		return err
 	}
-
 	return nil
 }
 
