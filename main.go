@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/drone-plugins/drone-mvn/mavendeploy"
+	"github.com/thomasf/drone-mvn/mavendeploy"
 	"github.com/drone/drone-plugin-go/plugin"
 )
 
