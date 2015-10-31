@@ -1,4 +1,4 @@
-package main
+package mavendeploy
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ func TestSkip(t *testing.T) {
 		Args:       Args{},
 	}
 	localTest(mvn, func() {
-		err := mvn.publish()
+		err := mvn.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -36,7 +36,7 @@ func TestURL(t *testing.T) {
 		Args:       Args{},
 	}
 
-	err := mvn.publish()
+	err := mvn.Publish()
 	if err == nil || err != errRequiredValue {
 		t.Fatal("url should be required")
 	}
@@ -45,7 +45,7 @@ func TestURL(t *testing.T) {
 func TestPublish1(t *testing.T) {
 	t.Parallel()
 	mvn := &Maven{
-		// quiet: true,
+		quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
@@ -60,7 +60,7 @@ func TestPublish1(t *testing.T) {
 		},
 	}
 	localTest(mvn, func() {
-		err := mvn.publish()
+		err := mvn.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -107,7 +107,7 @@ func TestPublish2(t *testing.T) {
 	t.Parallel()
 
 	mvn := &Maven{
-		// quiet: true,
+		quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
@@ -124,7 +124,7 @@ func TestPublish2(t *testing.T) {
 		},
 	}
 	localTest(mvn, func() {
-		err := mvn.publish()
+		err := mvn.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -145,7 +145,7 @@ func TestPublish3(t *testing.T) {
 	t.Parallel()
 
 	mvn := &Maven{
-		// quiet: true,
+		quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
@@ -163,7 +163,7 @@ func TestPublish3(t *testing.T) {
 		},
 	}
 	localTest(mvn, func() {
-		err := mvn.publish()
+		err := mvn.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -182,7 +182,6 @@ func TestPublish3(t *testing.T) {
 }
 
 func TestGPGSign(t *testing.T) {
-	return
 	t.Parallel()
 
 	mvn := &Maven{
@@ -240,7 +239,7 @@ qowrkn3DWFEkJhVkFTFJ8+Pvv5bMiAK1GFg1PhtgaK+t3ad7gDBf
 		},
 	}
 	localTest(mvn, func() {
-		err := mvn.publish()
+		err := mvn.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -257,7 +256,7 @@ func localTest(mvn *Maven, fn func()) {
 		os.RemoveAll(tmpdir)
 	}()
 	mvn.workspacePath = "test-data/"
-	// mvn.quiet = false
+	// mvn.quiet = true
 	fn()
 }
 
