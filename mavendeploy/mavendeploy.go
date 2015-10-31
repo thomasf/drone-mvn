@@ -25,7 +25,7 @@ type Maven struct {
 	GPG        // signing information
 	Args       // drone-mvn specific options
 
-
+	gpgCmd        *GpgCmd
 	workspacePath string // path to the
 	settingsPath  string
 	artifacts     map[string][]Artifact
@@ -94,6 +94,20 @@ func (mvn *Maven) Publish() error {
 	err := mvn.parseSources()
 	if err != nil {
 		return err
+	}
+	if mvn.GPG.PrivateKey != "" {
+		gpgCmd := &GpgCmd{GPG: mvn.GPG}
+		err := gpgCmd.Setup()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := gpgCmd.Teardown()
+			if err != nil {
+				panic(err)
+			}
+		}()
+		mvn.gpgCmd = gpgCmd
 	}
 
 	settings, err := m2Settings(*mvn)
@@ -251,14 +265,17 @@ func (m Maven) command(artifacts ...Artifact) *exec.Cmd {
 	args = append(args,
 		"--settings", m.settingsPath,
 	)
+	if m.gpgCmd != nil {
 
-	if m.GPG.PrivateKey != "" {
-
-		fmt.Println("WARNING: GPG signing is not yet implmented")
 		args = append(args,
 			mavenGpg,
+			fmt.Sprintf("-Dgpg.defaultKeyring=false"),
+			fmt.Sprintf("-Dgpg.publicKeyring=%s", m.gpgCmd.PublicRing),
+			fmt.Sprintf("-Dgpg.secretKeyring=%s", m.gpgCmd.SecretRing),
+			fmt.Sprintf("-Dgpg.keyname=%s", m.gpgCmd.SecretKeyID),
 			fmt.Sprintf("-Dgpg.passphraseServerId=%s", gpgServerID),
-			fmt.Sprintf("-Dgpg.keyname=%s", "TODO"),
+			fmt.Sprintf("-Dgpg.ascDirectory=%s", m.gpgCmd.tempDir),
+
 		)
 	} else {
 		args = append(args, mavenDeploy)

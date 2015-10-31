@@ -12,7 +12,6 @@ import (
 func TestSkip(t *testing.T) {
 	t.Parallel()
 	mvn := &Maven{
-		quiet:      true,
 		Repository: Repository{},
 		Artifact:   Artifact{},
 		GPG:        GPG{},
@@ -29,7 +28,6 @@ func TestSkip(t *testing.T) {
 func TestURL(t *testing.T) {
 	t.Parallel()
 	mvn := &Maven{
-		quiet:      true,
 		Repository: Repository{Username: "u", Password: "p"},
 		Artifact:   Artifact{},
 		GPG:        GPG{},
@@ -45,7 +43,6 @@ func TestURL(t *testing.T) {
 func TestPublish1(t *testing.T) {
 	t.Parallel()
 	mvn := &Maven{
-		quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
@@ -107,7 +104,6 @@ func TestPublish2(t *testing.T) {
 	t.Parallel()
 
 	mvn := &Maven{
-		quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
@@ -145,7 +141,6 @@ func TestPublish3(t *testing.T) {
 	t.Parallel()
 
 	mvn := &Maven{
-		quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
@@ -185,7 +180,6 @@ func TestGPGSign(t *testing.T) {
 	t.Parallel()
 
 	mvn := &Maven{
-		// quiet: true,
 		Repository: Repository{
 			Username: "user",
 			Password: "pass",
@@ -197,7 +191,129 @@ func TestGPGSign(t *testing.T) {
 			Version:    "1.9.3",
 		},
 		GPG: GPG{
-			PrivateKey: `-----Begin PGP PRIVATE KEY BLOCK-----
+			PrivateKey: privateKey,
+			Passphrase: `test`,
+		},
+		Args: Args{
+			Source: "single/release.zip",
+			Debug:  true,
+		},
+	}
+	localTest(mvn, func() {
+		err := mvn.Publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertLocalArtifacts(t, mvn,
+			"com/test/publishGpg/release/maven-metadata.xml.md5",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc.md5",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.md5",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc.md5",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.md5",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc",
+			"com/test/publishGpg/release/maven-metadata.xml.sha1",
+			"com/test/publishGpg/release/maven-metadata.xml",
+		)
+	})
+}
+
+func TestGPGSign2(t *testing.T) {
+	t.Parallel()
+	mvn := &Maven{
+		Repository: Repository{
+			Username: "u",
+			Password: "p",
+		},
+		Artifact: Artifact{
+			GroupID: "com.test.gpg2",
+		},
+		GPG: GPG{
+			PrivateKey: privateKey,
+			Passphrase: `test`,
+		},
+		Args: Args{
+			Source: "multiple-matched/app-client*",
+			Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)$",
+		},
+	}
+	localTest(mvn, func() {
+		err := mvn.Publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assertLocalArtifacts(t, mvn,
+			"com/test/gpg2/app-client/maven-metadata.xml.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.md5",
+			"com/test/gpg2/app-client/maven-metadata.xml.sha1",
+			"com/test/gpg2/app-client/maven-metadata.xml",
+		)
+	})
+}
+
+func localTest(mvn *Maven, fn func()) {
+	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
+	if err != nil {
+		panic(err)
+	}
+	mvn.Repository.URL = fmt.Sprintf("file://%s", tmpdir)
+	defer func() {
+		os.RemoveAll(tmpdir)
+	}()
+	mvn.workspacePath = "test-data/"
+	mvn.quiet = true
+	fn()
+}
+
+func assertLocalArtifacts(t *testing.T, mvn *Maven, path ...string) {
+	basepath := strings.TrimPrefix(mvn.Repository.URL, "file://")
+	for _, v := range path {
+		fullpath := filepath.Join(basepath, v)
+		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
+			t.Fatalf("no such file or directory: %s", fullpath)
+			return
+		}
+	}
+
+}
+
+const privateKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
 Version: GnuPG v1
 
 lQH+BFY0AN8BBADCJ7NAMFJXkgti6vpxCZSlZlO6IjqrEmHBnyLkIo6OX1uZmtBS
@@ -231,43 +347,24 @@ noNj0zBlnpI5lbxMFPsFA2qhdGCGvpMiaOwbvsR9lz9QwcRYAASft9CCIp5LJc9t
 qowrkn3DWFEkJhVkFTFJ8+Pvv5bMiAK1GFg1PhtgaK+t3ad7gDBf
 =vGoy
 -----END PGP PRIVATE KEY BLOCK-----
-`,
-			Passphrase: `test`,
-		},
-		Args: Args{
-			Source: "single/release.zip",
-		},
-	}
-	localTest(mvn, func() {
-		err := mvn.Publish()
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
-}
+`
 
-func localTest(mvn *Maven, fn func()) {
-	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
-	if err != nil {
-		panic(err)
-	}
-	mvn.Repository.URL = fmt.Sprintf("file://%s", tmpdir)
-	defer func() {
-		os.RemoveAll(tmpdir)
-	}()
-	mvn.workspacePath = "test-data/"
-	// mvn.quiet = true
-	fn()
-}
+const publicKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1
 
-func assertLocalArtifacts(t *testing.T, mvn *Maven, path ...string) {
-	basepath := strings.TrimPrefix(mvn.Repository.URL, "file://")
-	for _, v := range path {
-		fullpath := filepath.Join(basepath, v)
-		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
-			t.Fatalf("no such file or directory: %s", fullpath)
-			return
-		}
-	}
-
-}
+mI0EVjQA3wEEAMIns0AwUleSC2Lq+nEJlKVmU7oiOqsSYcGfIuQijo5fW5ma0FJ/
+XCVJUB69w0kkloeQtDPy8C8TuXPFW8cQvw/Z6DrNQaYlESUJt1w/oe2K9iC5q35V
+1R7Tnsqnuw7KOGLs/ahRNSPsxrdEYC+iL3u6CAGXzyDBgvL6HPwwE96VABEBAAG0
+CHRlc3Qga2V5iLgEEwECACIFAlY0AN8CGwMGCwkIBwMCBhUIAgkKCwQWAgMBAh4B
+AheAAAoJEInlFUgfj6Eu5NUD/3EwqgEs+6d5T1mkhtvl0ECeeesMQIozEYX/1z6w
+jJ9YXm9K6bIisHpUUwDqI3RuVsgFdpwGdxJOvmlbl4ieqkHwKzwV2I/IGJaEHpIZ
+ldBqspLdxJkeT3ttM3egGgfruQ+UqcPgX4g2qyP56bSI6afdXC1ph6lMdJ3Pbh1x
+IUkNuI0EVjQA3wEEALJBp2uuiQIgMO5UE2F51qkPBcOLUeY0W1wkj90oNGH/2POH
+LxwEMFCQ1JQ3aqs6sf2K+DXMhCfCnbsetNWgPVIQQxSLqEEHqehE1J0c8KkVkJiv
+4U/C+PcK5kapIysakThYCgytDtbx5wJYfZGXNdl44zw1ge5dhIlyuZICxqXrABEB
+AAGInwQYAQIACQUCVjQA3wIbDAAKCRCJ5RVIH4+hLsXVBADApx070XiL1pDSss48
+yuWtA2QpiS6BZifM5ja3UjRLBwoOxxODC3Xqy56DY9MwZZ6SOZW8TBT7BQNqoXRg
+hr6TImjsG77EfZc/UMHEWAAEn7fQgiKeSyXPbaqMK5J9w1hRJCYVZBUxSfPj77+W
+zIgCtRhYNT4bYGivrd2ne4AwXw==
+=k72J
+-----END PGP PUBLIC KEY BLOCK-----`

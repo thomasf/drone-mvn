@@ -1,4 +1,12 @@
------BEGIN PGP PRIVATE KEY BLOCK-----
+package mavendeploy
+
+import "testing"
+
+func TestGPGSetup(t *testing.T) {
+
+	gpgc := GpgCmd{
+		GPG: GPG{
+			PrivateKey: `-----BEGIN PGP PRIVATE KEY BLOCK-----
 Version: GnuPG v1
 
 lQH+BFY0AN8BBADCJ7NAMFJXkgti6vpxCZSlZlO6IjqrEmHBnyLkIo6OX1uZmtBS
@@ -31,4 +39,13 @@ j6EuxdUEAMCnHTvReIvWkNKyzjzK5a0DZCmJLoFmJ8zmNrdSNEsHCg7HE4MLderL
 noNj0zBlnpI5lbxMFPsFA2qhdGCGvpMiaOwbvsR9lz9QwcRYAASft9CCIp5LJc9t
 qowrkn3DWFEkJhVkFTFJ8+Pvv5bMiAK1GFg1PhtgaK+t3ad7gDBf
 =vGoy
------END PGP PRIVATE KEY BLOCK-----
+-----END PGP PRIVATE KEY BLOCK-----`,
+			Passphrase: `test`,
+		},
+	}
+	err := gpgc.Setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}
