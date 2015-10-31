@@ -1,20 +1,20 @@
-# Docker image for the Drone build runner
+# Docker image for the Drone mvn plugin runner
 #
 
-FROM java:8
+from java:8
 
-RUN mkdir -p /opt \
+run mkdir -p /opt \
       && cd /opt \
       && wget -q http://apache.mirrors.spacedump.net/maven/maven-3/3.3.3/binaries/apache-maven-3.3.3-bin.tar.gz \
       && tar -xf apache-maven-3.3.3-bin.tar.gz \
       && ln -s apache-maven-3.3.3 apache-maven
 
-ENV PATH=/opt/apache-maven/bin:$PATH
+env PATH=/opt/apache-maven/bin:$PATH
 
 # hacky way to get most maven dependencies into the cache
 run echo '<settings></settings>' > /tmp/s \
     && mvn -q -s /tmp/s \
-    deploy:deploy-file \
+    org.apache.maven.plugins:maven-deploy-plugin:2.7:deploy-file \
     -Durl=file:/tmp/t \
     -DrepositoryId=t \
     -Dfile=/bin/ls \
@@ -28,7 +28,7 @@ run echo '<settings></settings>' > /tmp/s \
 
 run echo '<settings></settings>' > /tmp/s \
     && mvn -q -s /tmp/s \
-    gpg:sign-and-deploy-file \
+    org.apache.maven.plugins:maven-gpg-plugin:1.6:sign-and-deploy-file \
     -Durl=file:/tmp/t \
     -DrepositoryId=t \
     -Dfile=/bin/ls \
@@ -41,5 +41,15 @@ run echo '<settings></settings>' > /tmp/s \
     && rm -rf /root/.m2/repository/t
 
 
-ADD drone-mvn /bin/
-ENTRYPOINT ["/bin/drone-mvn"]
+run mkdir -p /usr/local && curl -sSL https://golang.org/dl/go1.5.1.linux-amd64.tar.gz \
+        | tar -C /usr/local/ -xz
+env GOPATH /go
+env PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+env GO15VENDOREXPERIMENT 1
+
+add . /go/src/github.com/thomasf/drone-mvn
+run go build -o /bin/drone-mvn /go/src/github.com/thomasf/drone-mvn/main.go
+
+run rm -rf /opt/go && rm -rf /go
+
+entrypoint ["/bin/drone-mvn"]
