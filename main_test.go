@@ -3,34 +3,57 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 )
 
+func localTest(mvn *Maven, fn func()) {
+	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
+	if err != nil {
+		panic(err)
+	}
+	mvn.Repository.URL = fmt.Sprintf("file://%s", tmpdir)
+	defer func() {
+		os.RemoveAll(tmpdir)
+	}()
+	mvn.workspacePath = "test-data/"
+	mvn.quiet = true
+
+	fn()
+}
+
 func TestSkip(t *testing.T) {
 	t.Parallel()
-	err := publish(&Maven{
+
+	mvn := &Maven{
 		// quiet:      true,
 		Repository: Repository{},
 		Artifact:   Artifact{},
 		GPG:        GPG{},
 		Args:       Args{},
-	}, "test-data/")
-
-	if err != nil {
-		t.Fatal(err)
 	}
+	localTest(mvn, func() {
+		err := mvn.publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+	})
 
 }
 
 func TestURL(t *testing.T) {
 	t.Parallel()
-	err := publish(&Maven{
+
+	mvn := &Maven{
 		// quiet:      true,
 		Repository: Repository{Username: "u", Password: "p"},
 		Artifact:   Artifact{},
 		GPG:        GPG{},
 		Args:       Args{},
-	}, "test-data/")
+	}
+
+	err := mvn.publish()
 	if err == nil || err != errRequiredValue {
 		t.Fatal("url should be required")
 	}
@@ -39,16 +62,11 @@ func TestURL(t *testing.T) {
 
 func TestPublish1(t *testing.T) {
 	t.Parallel()
-	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
-	if err != nil {
-		panic(err)
-	}
-	err = publish(&Maven{
+	mvn := &Maven{
 		// quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
-			URL:      fmt.Sprintf("file://%s", tmpdir),
 		},
 		Artifact: Artifact{
 			GroupID: "com.test.publish1",
@@ -58,24 +76,23 @@ func TestPublish1(t *testing.T) {
 			Source: "multiple-matched/app*",
 			Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)$",
 		},
-	}, "test-data/")
-	if err != nil {
-		t.Fatal(err)
 	}
+	localTest(mvn, func() {
+		err := mvn.publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func TestPublish2(t *testing.T) {
 	t.Parallel()
-	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
-	if err != nil {
-		panic(err)
-	}
-	err = publish(&Maven{
+
+	mvn := &Maven{
 		// quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
-			URL:      fmt.Sprintf("file://%s", tmpdir),
 		},
 		Artifact: Artifact{
 			GroupID:    "com.test.publish2",
@@ -87,24 +104,23 @@ func TestPublish2(t *testing.T) {
 		Args: Args{
 			Source: "single/release.zip",
 		},
-	}, "test-data/")
-	if err != nil {
-		t.Fatal(err)
 	}
+	localTest(mvn, func() {
+		err := mvn.publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func TestPublish3(t *testing.T) {
 	t.Parallel()
-	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
-	if err != nil {
-		panic(err)
-	}
-	err = publish(&Maven{
+
+	mvn := &Maven{
 		// quiet: true,
 		Repository: Repository{
 			Username: "u",
 			Password: "p",
-			URL:      fmt.Sprintf("file://%s", tmpdir),
 		},
 		Artifact: Artifact{
 			GroupID:    "com.test.publish3",
@@ -117,24 +133,23 @@ func TestPublish3(t *testing.T) {
 			Source: "single-matched/*.zip",
 			Regexp: "(?P<artifact>[^/-]*)-(?P<classifier>[^-]*-[^-]*).zip$",
 		},
-	}, "test-data/")
-	if err != nil {
-		t.Fatal(err)
 	}
+	localTest(mvn, func() {
+		err := mvn.publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func TestGPGSign(t *testing.T) {
 	t.Parallel()
-	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
-	if err != nil {
-		panic(err)
-	}
-	err = publish(&Maven{
+
+	mvn := &Maven{
 		// quiet: true,
 		Repository: Repository{
 			Username: "user",
 			Password: "pass",
-			URL:      fmt.Sprintf("file://%s", tmpdir),
 		},
 		Artifact: Artifact{
 			GroupID:    "com.test.publishGpg",
@@ -183,8 +198,11 @@ qowrkn3DWFEkJhVkFTFJ8+Pvv5bMiAK1GFg1PhtgaK+t3ad7gDBf
 		Args: Args{
 			Source: "single/release.zip",
 		},
-	}, "test-data/")
-	if err != nil {
-		t.Fatal(err)
 	}
+	localTest(mvn, func() {
+		err := mvn.publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 }

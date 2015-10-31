@@ -27,13 +27,12 @@ type Maven struct {
 	GPG        // signing information
 	Args       // drone-mvn specific options
 
-	workspacePath string
+	// local worker state
+	workspacePath string // path to the
+	settingsPath  string
 	artifacts     map[string][]Artifact
 	quiet         bool
 }
-
-// Debug enabled verbose logging
-var Debug = false
 
 // Repository is a target Maven repository configuration
 type Repository struct {
@@ -78,7 +77,8 @@ func main() {
 	plugin.Param("vargs", &vargs)
 	plugin.MustParse()
 
-	err := publish(&vargs, workspace.Path)
+	vargs.workspacePath = workspace.Path
+	err := vargs.publish()
 	if err != nil {
 		panic(err)
 	}
@@ -90,11 +90,9 @@ var (
 	errNotFound      = errors.New("not found")
 )
 
-func publish(mvn *Maven, workspacePath string) error {
-
-	mvn.workspacePath = workspacePath
-	if !Debug {
-		Debug = mvn.Args.Debug
+func (mvn *Maven) publish() error {
+	if mvn.quiet {
+		mvn.Args.Debug = false
 	}
 
 	// skip if Repository Username or Password are empty. A good example for
@@ -118,16 +116,18 @@ func publish(mvn *Maven, workspacePath string) error {
 	if err != nil {
 		return err
 	}
+	mvn.settingsPath = settings
 	if !mvn.quiet {
 		fmt.Println("$", settings)
 	}
 	defer func() {
+
 		os.Remove(settings)
 	}()
 
 	var commands []*exec.Cmd
 	for _, v := range mvn.artifacts {
-		cmd := command(settings, mvn.Repository, mvn.GPG, v...)
+		cmd := mvn.command(v...)
 		cmd.Env = os.Environ()
 		// cmd.Dir = workspacePath
 		cmd.Stdout = os.Stdout
@@ -137,7 +137,7 @@ func publish(mvn *Maven, workspacePath string) error {
 
 	for _, cmd := range commands {
 		if !mvn.quiet {
-			trace(cmd)
+			mvn.trace(cmd)
 		}
 
 		// run the command and exit if failed.
@@ -204,7 +204,7 @@ func (m *Maven) parseSources() error {
 			}
 			a.file = s
 			parsed = append(parsed, a)
-			if Debug {
+			if m.Args.Debug {
 				fmt.Printf("$ parsed artifact: %v\n", a)
 			}
 
@@ -254,20 +254,21 @@ func (m *Maven) parseSources() error {
 
 // command is a helper function that returns the command
 // and arguments to upload to aws from the command line.
-func command(settingspath string, repo Repository, gpg GPG, artifacts ...Artifact) *exec.Cmd {
+func (m Maven) command(artifacts ...Artifact) *exec.Cmd {
 
 	var args []string
-	if Debug {
-		// args = append(args, "-X")
-	} else {
+	switch {
+	case m.quiet:
 		args = append(args, "-q")
+	case m.Debug:
+		args = append(args, "-X")
 	}
 
 	args = append(args,
-		"--settings", settingspath,
+		"--settings", m.settingsPath,
 	)
 
-	if gpg.PrivateKey != "" {
+	if m.GPG.PrivateKey != "" {
 
 		fmt.Println("WARNING: GPG signing is not yet implmented")
 		args = append(args,
@@ -281,7 +282,7 @@ func command(settingspath string, repo Repository, gpg GPG, artifacts ...Artifac
 
 	a := artifacts[0]
 	args = append(args,
-		fmt.Sprintf("-Durl=%s", repo.URL),
+		fmt.Sprintf("-Durl=%s", m.Repository.URL),
 		fmt.Sprintf("-DrepositoryId=%s", deployRepoID),
 		fmt.Sprintf("-DgroupId=%s", a.GroupID),
 		fmt.Sprintf("-DartifactId=%s", a.ArtifactID),
@@ -307,12 +308,6 @@ func command(settingspath string, repo Repository, gpg GPG, artifacts ...Artifac
 		args = append(args, fmt.Sprintf("-Dtypes=%s", strings.Join(types, ",")))
 	}
 	return exec.Command("mvn", args...)
-}
-
-// trace writes each command to standard error (preceded by a ‘$ ’) before it
-// is executed. Used for debugging your build.
-func trace(cmd *exec.Cmd) {
-	fmt.Println("$", strings.Join(cmd.Args, " "))
 }
 
 // Settings is the root of the maven settings.xml file
@@ -367,6 +362,14 @@ func m2Settings(m Maven) (string, error) {
 	f.Close()
 	return f.Name(), nil
 
+}
+
+// trace writes each command to standard error (preceded by a ‘$ ’) before it
+// is executed. Used for debugging your build.
+func (m *Maven) trace(cmd *exec.Cmd) {
+	if !m.quiet {
+		fmt.Println("$", strings.Join(cmd.Args, " "))
+	}
 }
 
 // static id's for maven repo id and gpg auth info generation.
