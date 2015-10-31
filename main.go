@@ -90,6 +90,7 @@ var (
 	errNotFound      = errors.New("not found")
 )
 
+
 func (mvn *Maven) publish() error {
 	if mvn.quiet {
 		mvn.Args.Debug = false
@@ -98,12 +99,12 @@ func (mvn *Maven) publish() error {
 	// skip if Repository Username or Password are empty. A good example for
 	// this would be forks building a project.
 	if mvn.Repository.Username == "" || mvn.Repository.Password == "" {
-		fmt.Println("username or password is empty, skipping publish")
+		mvn.infof("username or password is empty, skipping publish")
 		return nil
 	}
 
 	if mvn.Repository.URL == "" {
-		fmt.Println("URL is not set")
+		mvn.infof("URL is not set")
 		return errRequiredValue
 	}
 
@@ -371,6 +372,13 @@ func (m *Maven) trace(cmd *exec.Cmd) {
 		fmt.Println("$", strings.Join(cmd.Args, " "))
 	}
 }
+
+func (m *Maven) infof(format string, a ...interface{}) {
+	if !m.quiet {
+		fmt.Println("$", fmt.Sprintf(format, a...))
+	}
+}
+
 
 // static id's for maven repo id and gpg auth info generation.
 const (

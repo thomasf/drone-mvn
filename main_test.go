@@ -4,29 +4,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
-func localTest(mvn *Maven, fn func()) {
-	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
-	if err != nil {
-		panic(err)
-	}
-	mvn.Repository.URL = fmt.Sprintf("file://%s", tmpdir)
-	defer func() {
-		os.RemoveAll(tmpdir)
-	}()
-	mvn.workspacePath = "test-data/"
-	mvn.quiet = true
-
-	fn()
-}
-
 func TestSkip(t *testing.T) {
 	t.Parallel()
-
 	mvn := &Maven{
-		// quiet:      true,
+		quiet:      true,
 		Repository: Repository{},
 		Artifact:   Artifact{},
 		GPG:        GPG{},
@@ -37,16 +23,13 @@ func TestSkip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
 	})
-
 }
 
 func TestURL(t *testing.T) {
 	t.Parallel()
-
 	mvn := &Maven{
-		// quiet:      true,
+		quiet:      true,
 		Repository: Repository{Username: "u", Password: "p"},
 		Artifact:   Artifact{},
 		GPG:        GPG{},
@@ -57,7 +40,6 @@ func TestURL(t *testing.T) {
 	if err == nil || err != errRequiredValue {
 		t.Fatal("url should be required")
 	}
-
 }
 
 func TestPublish1(t *testing.T) {
@@ -82,6 +64,42 @@ func TestPublish1(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		assertLocalArtifacts(t, mvn,
+			"com/test/publish1/app-client/maven-metadata.xml.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-386.zip.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-386.zip.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.md5",
+			"com/test/publish1/app-client/maven-metadata.xml.sha1",
+			"com/test/publish1/app-client/maven-metadata.xml",
+			"com/test/publish1/app-server/maven-metadata.xml.md5",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.readme.sha1",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.tar.gz.sha1",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.tar.gz.md5",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.readme.md5",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom.md5",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom.sha1",
+			"com/test/publish1/app-server/maven-metadata.xml.sha1",
+			"com/test/publish1/app-server/maven-metadata.xml",
+			"com/test/publish1/app-gui/maven-metadata.xml.md5",
+			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4-darwin-amd64.zip.md5",
+			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4.pom",
+			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4-darwin-amd64.zip.sha1",
+			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4.pom.md5",
+			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4.pom.sha1",
+			"com/test/publish1/app-gui/maven-metadata.xml.sha1",
+			"com/test/publish1/app-gui/maven-metadata.xml",
+		)
 	})
 }
 
@@ -110,6 +128,16 @@ func TestPublish2(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		assertLocalArtifacts(t, mvn,
+			"com/test/publish2/release/maven-metadata.xml.md5",
+			"com/test/publish2/release/1.2.3/release-1.2.3.zip.md5",
+			"com/test/publish2/release/1.2.3/release-1.2.3.zip.sha1",
+			"com/test/publish2/release/1.2.3/release-1.2.3.pom.sha1",
+			"com/test/publish2/release/1.2.3/release-1.2.3.pom",
+			"com/test/publish2/release/1.2.3/release-1.2.3.pom.md5",
+			"com/test/publish2/release/maven-metadata.xml.sha1",
+			"com/test/publish2/release/maven-metadata.xml",
+		)
 	})
 }
 
@@ -139,10 +167,22 @@ func TestPublish3(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		assertLocalArtifacts(t, mvn,
+			"com/test/publish3/app/maven-metadata.xml.md5",
+			"com/test/publish3/app/1.2.3/app-1.2.3.pom.md5",
+			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip.sha1",
+			"com/test/publish3/app/1.2.3/app-1.2.3.pom.sha1",
+			"com/test/publish3/app/1.2.3/app-1.2.3.pom",
+			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip.md5",
+			"com/test/publish3/app/maven-metadata.xml.sha1",
+			"com/test/publish3/app/maven-metadata.xml",
+		)
 	})
+
 }
 
 func TestGPGSign(t *testing.T) {
+	return
 	t.Parallel()
 
 	mvn := &Maven{
@@ -205,4 +245,30 @@ qowrkn3DWFEkJhVkFTFJ8+Pvv5bMiAK1GFg1PhtgaK+t3ad7gDBf
 			t.Fatal(err)
 		}
 	})
+}
+
+func localTest(mvn *Maven, fn func()) {
+	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
+	if err != nil {
+		panic(err)
+	}
+	mvn.Repository.URL = fmt.Sprintf("file://%s", tmpdir)
+	defer func() {
+		os.RemoveAll(tmpdir)
+	}()
+	mvn.workspacePath = "test-data/"
+	// mvn.quiet = false
+	fn()
+}
+
+func assertLocalArtifacts(t *testing.T, mvn *Maven, path ...string) {
+	basepath := strings.TrimPrefix(mvn.Repository.URL, "file://")
+	for _, v := range path {
+		fullpath := filepath.Join(basepath, v)
+		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
+			t.Fatalf("no such file or directory: %s", fullpath)
+			return
+		}
+	}
+
 }
