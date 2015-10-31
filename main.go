@@ -169,7 +169,9 @@ func (m *Maven) parseSources() error {
 
 	var parsed []Artifact
 	if m.Args.Regexp == "" {
-		parsed = append(parsed, m.Artifact)
+		a := m.Artifact
+		a.file = sources[0]
+		parsed = append(parsed, a)
 	} else {
 		re, err := regexp.Compile(m.Args.Regexp)
 		if err != nil {
