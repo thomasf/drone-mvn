@@ -45,11 +45,10 @@ run mkdir -p /usr/local && curl -sSL https://golang.org/dl/go1.5.1.linux-amd64.t
         | tar -C /usr/local/ -xz
 env GOPATH /go
 env PATH $GOPATH/bin:/usr/local/go/bin:$PATH
-env GO15VENDOREXPERIMENT 1
 
 add . /go/src/github.com/thomasf/drone-mvn
-run go build -o /bin/drone-mvn /go/src/github.com/thomasf/drone-mvn/main.go
+run GO15VENDOREXPERIMENT=1 go build -o /bin/drone-mvn /go/src/github.com/thomasf/drone-mvn/main.go
 
-run rm -rf /opt/go && rm -rf /go
+run rm -rf /go
 
 entrypoint ["/bin/drone-mvn"]
