@@ -1,14 +1,14 @@
+clone:
+  recursive: true
+  path: github.com/thomasf/drone-mvn
+
 build:
-  image: golang:1.5
+  image: thomasf/drone-mvn
   environment:
     - GO15VENDOREXPERIMENT=1
-    - GOOS=linux
-    - GOARCH=amd64
-    - CGO_ENABLED=0
   commands:
-    - go get
     - go build
-    - go test
+    - go test ./...
 
 # publish:
 #   docker:
@@ -18,4 +18,3 @@ build:
 #     repo: plugins/hello
 #     when:
 #       branch: master
-
