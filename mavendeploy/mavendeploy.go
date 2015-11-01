@@ -255,6 +255,8 @@ func (m *Maven) parseSources() error {
 func (m Maven) command(artifacts ...Artifact) *exec.Cmd {
 
 	var args []string
+	args = append(args, "-B")
+
 	switch {
 	case m.quiet:
 		args = append(args, "-q")

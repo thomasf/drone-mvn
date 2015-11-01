@@ -13,7 +13,7 @@ env PATH=/opt/apache-maven/bin:$PATH
 
 # hacky way to get most maven dependencies into the cache
 run echo '<settings></settings>' > /tmp/s \
-    && mvn -q -s /tmp/s \
+    && mvn -B -q -s /tmp/s \
     org.apache.maven.plugins:maven-deploy-plugin:2.7:deploy-file \
     -Durl=file:/tmp/t \
     -DrepositoryId=t \
@@ -27,7 +27,7 @@ run echo '<settings></settings>' > /tmp/s \
     && rm -rf /root/.m2/repository/t
 
 run echo '<settings></settings>' > /tmp/s \
-    && mvn -q -s /tmp/s \
+    && mvn -B -q -s /tmp/s \
     org.apache.maven.plugins:maven-gpg-plugin:1.6:sign-and-deploy-file \
     -Durl=file:/tmp/t \
     -DrepositoryId=t \
