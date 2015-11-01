@@ -21,11 +21,37 @@ gpg signing options:
 * **gpg_passphrase** - in clear text
 
 
-The following is a sample mvn configuration in your .drone.yml file:
+An example of .drone.yml publish configuration of a single snapshot or release build artifact:
 
 ```yaml
 publish:
-  mvn:
-    username: "user"
-    password: "mypassword"
+  drone-mvn:
+    image: thomasf/drone-mvn
+    username: my-maven-username
+    password: my-maven-password
+    url: https://nexus.mycompany.com/content/repositories/project-snapshots/
+    group_id: com.mycompany.project
+    artifact_id: webassets
+    version: SNAPSHOT
+    source: release/web*.tgz
+    extension: tgz
+
+    when:
+      branch: master
+
+  drone-mvn:
+    image: thomasf/drone-mvn
+    username: my-maven-username
+    password: my-maven-password
+    url: https://nexus.mycompany.com/content/repositories/project-releases/
+    group_id: com.mycompany.project
+    artifact_id: webassets
+    version: $$TAG
+    source: release/web*.tgz
+    extension: tgz
+    
+    when:
+        event: tag
 ```
+
+
