@@ -1,4 +1,16 @@
+# Drone-mvn
+
+## Introduction
+
 Use the mvn plugin to upload files and build artifacts to maven repositories.
+
+`drone-mvn` is mainly targeted at publishing builds of non Java projects since
+maven/gradle can handle those fine. Sonatype Nexus (OSS) is a fine solution for
+storing build artifacts of any type. Nexus has a very configurable
+authorization system which allows for giving access to artifacts by path
+matching and much much more.
+
+## options for .drone.yml
 
 Maven property options:
 
@@ -20,6 +32,7 @@ gpg signing options:
 * **gpg_private_key** - in gnupg private key pem format
 * **gpg_passphrase** - in clear text
 
+## Configuration examples
 
 An example of .drone.yml publish configuration of a single snapshot or release build artifact:
 
