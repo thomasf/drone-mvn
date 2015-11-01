@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -41,11 +42,11 @@ type Repository struct {
 
 // Artifact is a target Maven artifact.
 type Artifact struct {
-	GroupID    string `json:"group"`    // e.g. org.springframework
-	ArtifactID string `json:"artifact"` // e.g. spring-core
-	Version    string `json:"version"`     // e.g. 4.1.3.RELEASE
-	Classifier string `json:"classifier"`  // e.g. sources, javadoc, <the empty string>...
-	Extension  string `json:"extension"`   // e.g. jar, .tar.gz, .zip
+	GroupID    string `json:"group"`      // e.g. org.springframework
+	ArtifactID string `json:"artifact"`   // e.g. spring-core
+	Version    string `json:"version"`    // e.g. 4.1.3.RELEASE
+	Classifier string `json:"classifier"` // e.g. sources, javadoc, <the empty string>...
+	Extension  string `json:"extension"`  // e.g. jar, .tar.gz, .zip
 	file       string
 }
 
@@ -91,7 +92,7 @@ func (mvn *Maven) Publish() error {
 		return errRequiredValue
 	}
 
-	err := mvn.parseSources()
+	err := mvn.Prepare()
 	if err != nil {
 		return err
 	}
@@ -147,38 +148,44 @@ func (mvn *Maven) Publish() error {
 	return nil
 }
 
-func (m *Maven) parseSources() error {
-	sources, err := filepath.Glob(m.workspacePath + string(os.PathSeparator) + m.Args.Source)
+func (mvn *Maven) Prepare() error {
+	sources, err := filepath.Glob(mvn.workspacePath + string(os.PathSeparator) + mvn.Args.Source)
+
 	if err != nil {
 		return err
 	}
 
 	if len(sources) == 0 {
-		return fmt.Errorf("no sources found for %s ", m.Args.Source)
+		return fmt.Errorf("no sources found for %s ", mvn.Args.Source)
+	}
+
+	if mvn.Args.Debug {
+		fmt.Println("sources found:")
+		spew.Dump(sources)
 	}
 
 	if len(sources) > 1 {
-		if m.Args.Regexp == "" {
+		if mvn.Args.Regexp == "" {
 			return fmt.Errorf(
 				"multiple sources found for %s (%v) but no regexp was defined",
-				m.Args.Source, sources)
+				mvn.Args.Source, sources)
 		}
 	}
 
 	var parsed []Artifact
-	if m.Args.Regexp == "" {
-		a := m.Artifact
+	if mvn.Args.Regexp == "" {
+		a := mvn.Artifact
 		a.file = sources[0]
 		parsed = append(parsed, a)
 	} else {
-		re, err := regexp.Compile(m.Args.Regexp)
+		re, err := regexp.Compile(mvn.Args.Regexp)
 		if err != nil {
 			return err
 		}
 		for _, s := range sources {
 			matches := re.FindStringSubmatch(s)
 			if matches == nil {
-				return fmt.Errorf("regexp '%s' does not match '%s'", m.Args.Regexp, s)
+				return fmt.Errorf("regexp '%s' does not match '%s'", mvn.Args.Regexp, s)
 			}
 			var a Artifact
 			for i, name := range re.SubexpNames() {
@@ -202,8 +209,9 @@ func (m *Maven) parseSources() error {
 			}
 			a.file = s
 			parsed = append(parsed, a)
-			if m.Args.Debug {
-				fmt.Printf("$ parsed artifact: %v\n", a)
+			if mvn.Args.Debug {
+				fmt.Println("$ parsed artifact")
+				spew.Dump(a)
 			}
 
 		}
@@ -220,13 +228,13 @@ func (m *Maven) parseSources() error {
 	fill := func(orig Artifact) Artifact {
 		a := orig
 		if a.GroupID == "" {
-			a.GroupID = m.Artifact.GroupID
+			a.GroupID = mvn.Artifact.GroupID
 		}
 		if a.Version == "" {
-			a.Version = m.Artifact.Version
+			a.Version = mvn.Artifact.Version
 		}
 		if a.ArtifactID == "" {
-			a.ArtifactID = m.Artifact.ArtifactID
+			a.ArtifactID = mvn.Artifact.ArtifactID
 		}
 		return a
 	}
@@ -245,38 +253,42 @@ func (m *Maven) parseSources() error {
 		return errNotFound
 	}
 
-	m.artifacts = mapped
+	mvn.artifacts = mapped
+	if mvn.Args.Debug {
+		fmt.Println("mapped artifacts")
+		spew.Dump(mapped)
+	}
 
 	return nil
 }
 
 // command is a helper function that returns the command
 // and arguments to upload to aws from the command line.
-func (m Maven) command(artifacts ...Artifact) *exec.Cmd {
+func (mvn Maven) command(artifacts ...Artifact) *exec.Cmd {
 
 	var args []string
 	args = append(args, "-B")
 
 	switch {
-	case m.quiet:
+	case mvn.quiet:
 		args = append(args, "-q")
-	case m.Debug:
+	case mvn.Debug:
 		args = append(args, "-X")
 	}
 
 	args = append(args,
-		"--settings", m.settingsPath,
+		"--settings", mvn.settingsPath,
 	)
-	if m.gpgCmd != nil {
+	if mvn.gpgCmd != nil {
 
 		args = append(args,
 			mavenGpg,
 			fmt.Sprintf("-Dgpg.defaultKeyring=false"),
-			fmt.Sprintf("-Dgpg.publicKeyring=%s", m.gpgCmd.PublicRing),
-			fmt.Sprintf("-Dgpg.secretKeyring=%s", m.gpgCmd.SecretRing),
-			fmt.Sprintf("-Dgpg.keyname=%s", m.gpgCmd.SecretKeyID),
+			fmt.Sprintf("-Dgpg.publicKeyring=%s", mvn.gpgCmd.PublicRing),
+			fmt.Sprintf("-Dgpg.secretKeyring=%s", mvn.gpgCmd.SecretRing),
+			fmt.Sprintf("-Dgpg.keyname=%s", mvn.gpgCmd.SecretKeyID),
 			fmt.Sprintf("-Dgpg.passphraseServerId=%s", gpgServerID),
-			fmt.Sprintf("-Dgpg.ascDirectory=%s", m.gpgCmd.tempDir),
+			fmt.Sprintf("-Dgpg.ascDirectory=%s", mvn.gpgCmd.tempDir),
 		)
 	} else {
 		args = append(args, mavenDeploy)
@@ -284,7 +296,7 @@ func (m Maven) command(artifacts ...Artifact) *exec.Cmd {
 
 	a := artifacts[0]
 	args = append(args,
-		fmt.Sprintf("-Durl=%s", m.Repository.URL),
+		fmt.Sprintf("-Durl=%s", mvn.Repository.URL),
 		fmt.Sprintf("-DrepositoryId=%s", deployRepoID),
 		fmt.Sprintf("-DgroupId=%s", a.GroupID),
 		fmt.Sprintf("-DartifactId=%s", a.ArtifactID),
@@ -368,14 +380,14 @@ func m2Settings(m Maven) (string, error) {
 
 // trace writes each command to standard error (preceded by a ‘$ ’) before it
 // is executed. Used for debugging your build.
-func (m *Maven) trace(cmd *exec.Cmd) {
-	if !m.quiet {
+func (mvn *Maven) trace(cmd *exec.Cmd) {
+	if !mvn.quiet {
 		fmt.Println("$", strings.Join(cmd.Args, " "))
 	}
 }
 
-func (m *Maven) infof(format string, a ...interface{}) {
-	if !m.quiet {
+func (mvn *Maven) infof(format string, a ...interface{}) {
+	if !mvn.quiet {
 		fmt.Println("$", fmt.Sprintf(format, a...))
 	}
 }
