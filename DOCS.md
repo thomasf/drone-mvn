@@ -4,8 +4,8 @@ Maven property options:
 
 * **username** - maven username
 * **password** - maven password
-* **group_id** - default artifact group ID
-* **artifact_id** - default artifact ID
+* **group** - default artifact group ID
+* **artifact** - default artifact ID
 * **version** - default artifact version
 * **classifier** - default artifact classifier
 * **extension** - default artifact extension
@@ -30,8 +30,8 @@ publish:
     username: my-maven-username
     password: my-maven-password
     url: https://nexus.mycompany.com/content/repositories/project-snapshots/
-    group_id: com.mycompany.project
-    artifact_id: webassets
+    group: com.mycompany.project
+    artifact: webassets
     version: SNAPSHOT
     source: release/web*.tgz
     extension: tgz
@@ -44,8 +44,8 @@ publish:
     username: my-maven-username
     password: my-maven-password
     url: https://nexus.mycompany.com/content/repositories/project-releases/
-    group_id: com.mycompany.project
-    artifact_id: webassets
+    group: com.mycompany.project
+    artifact: webassets
     version: $$TAG
     source: release/web*.tgz
     extension: tgz

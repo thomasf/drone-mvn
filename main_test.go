@@ -37,8 +37,8 @@ const testTemplate1 = `{
         "username": "someuser",
         "password": "somepassword",
         "url": "{{.URL}}",
-        "group_id": "com.alkasir.test",
-        "artifact_id": "Dockerfile",
+        "group": "com.alkasir.test",
+        "artifact": "Dockerfile",
         "packaging": "Dockerfile",
         "source": "test-data/multiple-matched/app*",
         "regexp": "(?P<artifact>app-[^-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)"

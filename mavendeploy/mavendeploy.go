@@ -41,8 +41,8 @@ type Repository struct {
 
 // Artifact is a target Maven artifact.
 type Artifact struct {
-	GroupID    string `json:"group_id"`    // e.g. org.springframework
-	ArtifactID string `json:"artifact_id"` // e.g. spring-core
+	GroupID    string `json:"group"`    // e.g. org.springframework
+	ArtifactID string `json:"artifact"` // e.g. spring-core
 	Version    string `json:"version"`     // e.g. 4.1.3.RELEASE
 	Classifier string `json:"classifier"`  // e.g. sources, javadoc, <the empty string>...
 	Extension  string `json:"extension"`   // e.g. jar, .tar.gz, .zip
