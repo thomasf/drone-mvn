@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -183,7 +184,12 @@ func (mvn *Maven) Prepare() error {
 			return err
 		}
 		for _, s := range sources {
-			matches := re.FindStringSubmatch(s)
+			rel, err := filepath.Rel(mvn.workspacePath, s)
+			if err != nil {
+				fmt.Printf("could not make source %s relative to %s\n", s, mvn.workspacePath)
+				return err
+			}
+			matches := re.FindStringSubmatch(rel)
 			if matches == nil {
 				return fmt.Errorf("regexp '%s' does not match '%s'", mvn.Args.Regexp, s)
 			}
