@@ -26,7 +26,7 @@ type Maven struct {
 	Args       // drone-mvn specific options
 
 	gpgCmd        *GpgCmd
-	workspacePath string // path to the
+	workspacePath string
 	settingsPath  string
 	artifacts     map[string][]Artifact
 	quiet         bool
@@ -277,7 +277,6 @@ func (m Maven) command(artifacts ...Artifact) *exec.Cmd {
 			fmt.Sprintf("-Dgpg.keyname=%s", m.gpgCmd.SecretKeyID),
 			fmt.Sprintf("-Dgpg.passphraseServerId=%s", gpgServerID),
 			fmt.Sprintf("-Dgpg.ascDirectory=%s", m.gpgCmd.tempDir),
-
 		)
 	} else {
 		args = append(args, mavenDeploy)
