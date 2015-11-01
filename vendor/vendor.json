@@ -3,6 +3,11 @@
 	"ignore": "test",
 	"package": [
 		{
+			"path": "github.com/davecgh/go-spew/spew",
+			"revision": "2df174808ee097f90d259e432cc04442cf60be21",
+			"revisionTime": "2015-06-17T22:34:22-05:00"
+		},
+		{
 			"path": "github.com/drone/drone-plugin-go/plugin",
 			"revision": "5890a2bbba26198cbfe776d5f5d1691958fbd8ed",
 			"revisionTime": "2015-10-27T14:03:37-07:00"
