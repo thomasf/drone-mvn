@@ -3,7 +3,7 @@
 Use the mvn plugin to upload files and build artifacts to maven repositories.
 
 `drone-mvn` is mainly targeted at publishing builds of non Java projects since
-maven/gradle usually handles the java ones without help.
+maven/gradle usually handles Java projects without needing additional help.
 
 [Sonatype Nexus (OSS)](http://www.sonatype.org/nexus/) is a great solution for
 storing build artifacts of any type. Nexus has a very configurable
