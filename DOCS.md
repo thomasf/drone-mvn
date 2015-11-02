@@ -1,20 +1,23 @@
 # Drone-mvn
 
-This plugin is at the time of writing only known to work with drone 0.4
-which is in beta. The example configuration below assumes that you are running
-your own drone instance and have
-[configured it correctly](http://readme.drone.io/setup/plugins.html) to allow
-this plugin.
-
-## Introduction
-
 Use the mvn plugin to upload files and build artifacts to maven repositories.
 
 `drone-mvn` is mainly targeted at publishing builds of non Java projects since
-maven/gradle can handle those fine. Sonatype Nexus (OSS) is a fine solution for
+maven/gradle usually handles the java ones without help.
+
+[Sonatype Nexus (OSS)](http://www.sonatype.org/nexus/) is a great solution for
 storing build artifacts of any type. Nexus has a very configurable
 authorization system which allows for giving access to artifacts by path
-matching and much much more.
+matching and much more.
+
+## Important comptatibility
+
+This plugin is at the time of writing only known to work with
+[drone 0.4](https://github.com/drone/drone) which is in beta. The example
+configurations below assumes that you are running your own drone instance and
+have [configured it correctly](http://readme.drone.io/setup/plugins.html) to
+allow this plugin.
+
 
 ## options for .drone.yml
 
