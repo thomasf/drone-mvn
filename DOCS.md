@@ -1,5 +1,11 @@
 # Drone-mvn
 
+This plugin is at the time of writing only known to work with drone 0.4
+which is in beta. The example configuration below assumes that you are running
+your own drone instance and have
+[http://readme.drone.io/setup/plugins.html](configured it correctly) to allow
+this plugin.
+
 ## Introduction
 
 Use the mvn plugin to upload files and build artifacts to maven repositories.
@@ -66,5 +72,4 @@ publish:
     when:
         event: tag
 ```
-
 
