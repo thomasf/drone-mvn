@@ -80,14 +80,12 @@ func (mvn *Maven) Publish() error {
 	if mvn.quiet {
 		mvn.Args.Debug = false
 	}
-
 	// skip if Repository Username or Password are empty. A good example for
 	// this would be forks building a project.
 	if mvn.Repository.Username == "" || mvn.Repository.Password == "" {
 		mvn.infof("username or password is empty, skipping publish")
 		return nil
 	}
-
 	if mvn.Repository.URL == "" {
 		mvn.infof("URL is not set")
 		return errRequiredValue
@@ -111,11 +109,11 @@ func (mvn *Maven) Publish() error {
 		}()
 		mvn.gpgCmd = gpgCmd
 	}
-
 	settings, err := m2Settings(*mvn)
 	if err != nil {
 		return err
 	}
+
 	mvn.settingsPath = settings
 	if !mvn.quiet {
 		fmt.Println("$", settings)
@@ -124,23 +122,20 @@ func (mvn *Maven) Publish() error {
 
 		os.Remove(settings)
 	}()
-
 	var commands []*exec.Cmd
 	for _, v := range mvn.artifacts {
 		cmd := mvn.command(v...)
 		cmd.Env = os.Environ()
-		// cmd.Dir = workspacePath
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		if !mvn.quiet {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		commands = append(commands, cmd)
 	}
-
 	for _, cmd := range commands {
 		if !mvn.quiet {
 			mvn.trace(cmd)
 		}
-
-		// run the command and exit if failed.
 		err = cmd.Run()
 		if err != nil {
 			return err
@@ -151,20 +146,16 @@ func (mvn *Maven) Publish() error {
 
 func (mvn *Maven) Prepare() error {
 	sources, err := filepath.Glob(mvn.workspacePath + string(os.PathSeparator) + mvn.Args.Source)
-
 	if err != nil {
 		return err
 	}
-
 	if len(sources) == 0 {
 		return fmt.Errorf("no sources found for %s ", mvn.Args.Source)
 	}
-
 	if mvn.Args.Debug {
 		fmt.Println("sources found:")
 		spew.Dump(sources)
 	}
-
 	if len(sources) > 1 {
 		if mvn.Args.Regexp == "" {
 			return fmt.Errorf(
@@ -219,7 +210,6 @@ func (mvn *Maven) Prepare() error {
 				fmt.Println("$ parsed artifact")
 				spew.Dump(a)
 			}
-
 		}
 		if len(parsed) == 0 {
 			return errNotFound
@@ -357,28 +347,23 @@ func m2Settings(m Maven) (string, error) {
 			Passphrase: m.GPG.Passphrase,
 		})
 	}
-
 	settings := Settings{
 		Servers: servers,
 	}
-
 	output, err := xml.MarshalIndent(settings, "", "    ")
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 		return "", err
 	}
-
 	f, err := ioutil.TempFile("", "drone-mvn-settings")
 	if err != nil {
 		return "", err
 	}
-
 	_, err = f.Write(output)
 	if err != nil {
 		os.Remove(f.Name())
 		return "", err
 	}
-
 	f.Close()
 	return f.Name(), nil
 

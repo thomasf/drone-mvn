@@ -5,20 +5,24 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
 
 func TestSkip(t *testing.T) {
-	t.Parallel()
-	mvn := &Maven{
-		Repository: Repository{},
-		Artifact:   Artifact{},
-		GPG:        GPG{},
-		Args:       Args{},
-	}
-	localTest(mvn, func() {
-		err := mvn.Publish()
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{},
+			Artifact:   Artifact{},
+			GPG:        GPG{},
+			Args:       Args{},
+		}}
+
+	l.Run(func(m *Maven) {
+		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -26,265 +30,376 @@ func TestSkip(t *testing.T) {
 }
 
 func TestURL(t *testing.T) {
-	t.Parallel()
-	mvn := &Maven{
-		Repository: Repository{Username: "u", Password: "p"},
-		Artifact:   Artifact{},
-		GPG:        GPG{},
-		Args:       Args{},
-	}
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{Username: "u", Password: "p"},
+			Artifact:   Artifact{},
+			GPG:        GPG{},
+			Args:       Args{},
+		}}
 
-	err := mvn.Publish()
+	err := l.Publish()
 	if err == nil || err != errRequiredValue {
 		t.Fatal("url should be required")
 	}
 }
 
 func TestPublish1(t *testing.T) {
-	t.Parallel()
-	mvn := &Maven{
-		Repository: Repository{
-			Username: "u",
-			Password: "p",
-		},
-		Artifact: Artifact{
-			GroupID: "com.test.publish1",
-		},
-		GPG: GPG{},
-		Args: Args{
-			Source: "multiple-matched/app*",
-			Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)$",
-		},
-	}
-	localTest(mvn, func() {
-		err := mvn.Publish()
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{
+				Username: "u",
+				Password: "p",
+			},
+			Artifact: Artifact{
+				GroupID: "com.test.publish1",
+			},
+			GPG: GPG{},
+			Args: Args{
+				Source: "multiple-matched/app*",
+				Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)$",
+			}}}
+
+	l.Run(func(m *Maven) {
+		// m.quiet = false
+		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-		assertLocalArtifacts(t, mvn,
-			"com/test/publish1/app-client/maven-metadata.xml.md5",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.sha1",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.sha1",
+		l.AssertArtifacts(
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip",
 			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.md5",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz",
 			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.md5",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-386.zip.sha1",
 			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.sha1",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.sha1",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom.sha1",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-386.zip.md5",
-			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz",
 			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.md5",
-			"com/test/publish1/app-client/maven-metadata.xml.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-386.zip",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-386.zip.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-386.zip.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.sha1",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom.md5",
+			"com/test/publish1/app-client/0.1.4/app-client-0.1.4.pom.sha1",
 			"com/test/publish1/app-client/maven-metadata.xml",
-			"com/test/publish1/app-server/maven-metadata.xml.md5",
-			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.readme.sha1",
-			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.tar.gz.sha1",
-			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.tar.gz.md5",
-			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.readme.md5",
-			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom.md5",
-			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom",
-			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom.sha1",
-			"com/test/publish1/app-server/maven-metadata.xml.sha1",
-			"com/test/publish1/app-server/maven-metadata.xml",
-			"com/test/publish1/app-gui/maven-metadata.xml.md5",
+			"com/test/publish1/app-client/maven-metadata.xml.md5",
+			"com/test/publish1/app-client/maven-metadata.xml.sha1",
+			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4-darwin-amd64.zip",
 			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4-darwin-amd64.zip.md5",
-			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4.pom",
 			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4-darwin-amd64.zip.sha1",
+			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4.pom",
 			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4.pom.md5",
 			"com/test/publish1/app-gui/0.1.4/app-gui-0.1.4.pom.sha1",
-			"com/test/publish1/app-gui/maven-metadata.xml.sha1",
 			"com/test/publish1/app-gui/maven-metadata.xml",
+			"com/test/publish1/app-gui/maven-metadata.xml.md5",
+			"com/test/publish1/app-gui/maven-metadata.xml.sha1",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.readme",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.readme.md5",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.readme.sha1",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.tar.gz",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.tar.gz.md5",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4-linux-amd64.tar.gz.sha1",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom.md5",
+			"com/test/publish1/app-server/0.1.4/app-server-0.1.4.pom.sha1",
+			"com/test/publish1/app-server/maven-metadata.xml",
+			"com/test/publish1/app-server/maven-metadata.xml.md5",
+			"com/test/publish1/app-server/maven-metadata.xml.sha1",
 		)
 	})
 }
 
 func TestPublish2(t *testing.T) {
-	t.Parallel()
 
-	mvn := &Maven{
-		Repository: Repository{
-			Username: "u",
-			Password: "p",
-		},
-		Artifact: Artifact{
-			GroupID:    "com.test.publish2",
-			ArtifactID: "release",
-			Extension:  "zip",
-			Version:    "1.2.3",
-		},
-		GPG: GPG{},
-		Args: Args{
-			Source: "single/release.zip",
-		},
-	}
-	localTest(mvn, func() {
-		err := mvn.Publish()
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{
+				Username: "u",
+				Password: "p",
+			},
+			Artifact: Artifact{
+				GroupID:    "com.test.publish2",
+				ArtifactID: "release",
+				Extension:  "zip",
+				Version:    "1.2.3",
+			},
+			GPG: GPG{},
+			Args: Args{
+				Source: "single/release.zip",
+			},
+		}}
+	l.Run(func(m *Maven) {
+
+		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-		assertLocalArtifacts(t, mvn,
-			"com/test/publish2/release/maven-metadata.xml.md5",
-			"com/test/publish2/release/1.2.3/release-1.2.3.zip.md5",
-			"com/test/publish2/release/1.2.3/release-1.2.3.zip.sha1",
-			"com/test/publish2/release/1.2.3/release-1.2.3.pom.sha1",
+		l.AssertArtifacts(
 			"com/test/publish2/release/1.2.3/release-1.2.3.pom",
 			"com/test/publish2/release/1.2.3/release-1.2.3.pom.md5",
-			"com/test/publish2/release/maven-metadata.xml.sha1",
+			"com/test/publish2/release/1.2.3/release-1.2.3.pom.sha1",
+			"com/test/publish2/release/1.2.3/release-1.2.3.zip",
+			"com/test/publish2/release/1.2.3/release-1.2.3.zip.md5",
+			"com/test/publish2/release/1.2.3/release-1.2.3.zip.sha1",
 			"com/test/publish2/release/maven-metadata.xml",
+			"com/test/publish2/release/maven-metadata.xml.md5",
+			"com/test/publish2/release/maven-metadata.xml.sha1",
 		)
 	})
 }
 
 func TestPublish3(t *testing.T) {
-	t.Parallel()
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{
+				Username: "u",
+				Password: "p",
+			},
+			Artifact: Artifact{
+				GroupID:    "com.test.publish3",
+				Extension:  "zip",
+				Version:    "1.2.3",
+				ArtifactID: "asd",
+			},
+			GPG: GPG{},
+			Args: Args{
+				Source: "single-matched/*.zip",
+				Regexp: "(?P<artifact>[^/-]*)-(?P<classifier>[^-]*-[^-]*).zip$",
+			}}}
 
-	mvn := &Maven{
-		Repository: Repository{
-			Username: "u",
-			Password: "p",
-		},
-		Artifact: Artifact{
-			GroupID:    "com.test.publish3",
-			Extension:  "zip",
-			Version:    "1.2.3",
-			ArtifactID: "asd",
-		},
-		GPG: GPG{},
-		Args: Args{
-			Source: "single-matched/*.zip",
-			Regexp: "(?P<artifact>[^/-]*)-(?P<classifier>[^-]*-[^-]*).zip$",
-		},
-	}
-	localTest(mvn, func() {
-		err := mvn.Publish()
+	l.Run(func(m *Maven) {
+		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-		assertLocalArtifacts(t, mvn,
-			"com/test/publish3/app/maven-metadata.xml.md5",
-			"com/test/publish3/app/1.2.3/app-1.2.3.pom.md5",
-			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip.sha1",
-			"com/test/publish3/app/1.2.3/app-1.2.3.pom.sha1",
-			"com/test/publish3/app/1.2.3/app-1.2.3.pom",
+		l.AssertArtifacts(
+			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip",
 			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip.md5",
-			"com/test/publish3/app/maven-metadata.xml.sha1",
+			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip.sha1",
+			"com/test/publish3/app/1.2.3/app-1.2.3.pom",
+			"com/test/publish3/app/1.2.3/app-1.2.3.pom.md5",
+			"com/test/publish3/app/1.2.3/app-1.2.3.pom.sha1",
 			"com/test/publish3/app/maven-metadata.xml",
+			"com/test/publish3/app/maven-metadata.xml.md5",
+			"com/test/publish3/app/maven-metadata.xml.sha1",
 		)
 	})
 
 }
 
-func TestGPGSign(t *testing.T) {
-	t.Parallel()
-
-	mvn := &Maven{
-		Repository: Repository{
-			Username: "user",
-			Password: "pass",
-		},
-		Artifact: Artifact{
-			GroupID:    "com.test.publishGpg",
-			ArtifactID: "release",
-			Extension:  "zip",
-			Version:    "1.9.3",
-		},
-		GPG: GPG{
-			PrivateKey: privateKey,
-			Passphrase: `test`,
-		},
-		Args: Args{
-			Source: "single/release.zip",
-			Debug:  true,
-		},
-	}
-	localTest(mvn, func() {
-		err := mvn.Publish()
+func TestGPGSign1(t *testing.T) {
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{
+				Username: "user",
+				Password: "pass",
+			},
+			Artifact: Artifact{
+				GroupID:    "com.test.publishGpg",
+				ArtifactID: "release",
+				Extension:  "zip",
+				Version:    "1.9.3",
+			},
+			GPG: GPG{
+				PrivateKey: privateKey,
+				Passphrase: `test`,
+			},
+			Args: Args{
+				Source: "single/release.zip",
+				Debug:  true,
+			},
+		}}
+	l.Run(func(m *Maven) {
+		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-		assertLocalArtifacts(t, mvn,
-			"com/test/publishGpg/release/maven-metadata.xml.md5",
-			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc.md5",
+		l.AssertArtifacts(
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom",
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc",
-			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc.sha1",
-			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.md5",
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc.md5",
-			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.sha1",
-			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc.sha1",
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.md5",
-			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip",
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc",
-			"com/test/publishGpg/release/maven-metadata.xml.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc.md5",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.asc.sha1",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.md5",
+			"com/test/publishGpg/release/1.9.3/release-1.9.3.zip.sha1",
 			"com/test/publishGpg/release/maven-metadata.xml",
+			"com/test/publishGpg/release/maven-metadata.xml.md5",
+			"com/test/publishGpg/release/maven-metadata.xml.sha1",
 		)
+	})
+}
+
+func TestGPGSignInvalidPassphrase(t *testing.T) {
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{
+				Username: "user",
+				Password: "pass",
+			},
+			Artifact: Artifact{
+				GroupID:    "com.test.publishGpg",
+				ArtifactID: "release",
+				Extension:  "zip",
+				Version:    "1.9.3",
+			},
+			GPG: GPG{
+				PrivateKey: privateKey,
+				Passphrase: `WRONG`,
+			},
+			Args: Args{
+				Source: "single/release.zip",
+				Debug:  true,
+			},
+		}}
+	l.Run(func(m *Maven) {
+		err := m.Publish()
+		if err == nil {
+			t.Fatal("had the wrong password")
+		}
 	})
 }
 
 func TestGPGSign2(t *testing.T) {
-	t.Parallel()
-	mvn := &Maven{
-		Repository: Repository{
-			Username: "u",
-			Password: "p",
-		},
-		Artifact: Artifact{
-			GroupID: "com.test.gpg2",
-		},
-		GPG: GPG{
-			PrivateKey: privateKey,
-			Passphrase: `test`,
-		},
-		Args: Args{
-			Source: "multiple-matched/app-client*",
-			Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)$",
-		},
-	}
-	localTest(mvn, func() {
-		err := mvn.Publish()
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{
+				Username: "u",
+				Password: "p",
+			},
+			Artifact: Artifact{
+				GroupID: "com.test.gpg2",
+			},
+			GPG: GPG{
+				PrivateKey: privateKey,
+				Passphrase: `test`,
+			},
+			Args: Args{
+				Source: "multiple-matched/app-client*",
+				Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)$",
+			},
+		}}
+
+	l.Run(func(m *Maven) {
+
+		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		assertLocalArtifacts(t, mvn,
-			"com/test/gpg2/app-client/maven-metadata.xml.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc.sha1",
+		l.AssertArtifacts(
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.asc",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.asc.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.sha1",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.md5",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-386.tar.gz.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.asc.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.asc.md5",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.asc.sha1",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.md5",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc",
-			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc.md5",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.md5",
-			"com/test/gpg2/app-client/maven-metadata.xml.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-linux-amd64.tar.gz.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-386.zip.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-windows-amd64.zip.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.asc.sha1",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.md5",
+			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4.pom.sha1",
 			"com/test/gpg2/app-client/maven-metadata.xml",
+			"com/test/gpg2/app-client/maven-metadata.xml.md5",
+			"com/test/gpg2/app-client/maven-metadata.xml.sha1",
 		)
 	})
+}
+
+// LocalTest .
+type LocalTest struct {
+	*testing.T
+	*Maven
+}
+
+func (l *LocalTest) Run(f func(m *Maven)) {
+	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
+	if err != nil {
+		panic(err)
+	}
+	l.T.Parallel()
+	l.Maven.Repository.URL = fmt.Sprintf("file://%s", tmpdir)
+	defer func() {
+		os.RemoveAll(tmpdir)
+	}()
+	l.Maven.workspacePath = "test-data/"
+	l.Maven.quiet = true
+	f(l.Maven)
+}
+
+func (l *LocalTest) AssertArtifacts(path ...string) {
+	basepath := strings.TrimPrefix(l.Maven.Repository.URL, "file://")
+
+	var files []string
+	err := filepath.Walk(basepath, func(path string, f os.FileInfo, err error) error {
+		p, err := filepath.Rel(basepath, path)
+		if err != nil {
+			panic(err)
+		}
+		if !f.IsDir() {
+			files = append(files, p)
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	sort.Strings(files)
+	sort.Strings(path)
+	if !reflect.DeepEqual(files, path) {
+
+		l.T.Fatalf(
+			"unexpected artifact file situation:\n\nfound:\n\n%s\n\nexpected:\n\n%s\n\n",
+			strings.Join(files, "\n"),
+			strings.Join(path, "\n"),
+		)
+	}
+	for _, v := range path {
+		fullpath := filepath.Join(basepath, v)
+		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
+			l.T.Fatalf("no such file or directory: %s", fullpath)
+			return
+		}
+	}
 }
 
 func localTest(mvn *Maven, fn func()) {
@@ -310,7 +425,6 @@ func assertLocalArtifacts(t *testing.T, mvn *Maven, path ...string) {
 			return
 		}
 	}
-
 }
 
 const privateKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----

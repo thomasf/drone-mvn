@@ -1,7 +1,6 @@
 package mavendeploy
 
 import (
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,6 +18,7 @@ type GpgCmd struct {
 	PublicRing  string
 	SecretRing  string
 	SecretKeyID string
+	Quiet       bool
 }
 
 func (g *GpgCmd) Setup() error {
@@ -61,8 +61,10 @@ func (g *GpgCmd) importKeys() error {
 	// import private key from pem string
 	{
 		cmd := g.newCmd("--import")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		if !g.Quiet {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
 			return err
@@ -89,7 +91,9 @@ func (g *GpgCmd) importKeys() error {
 		if err != nil {
 			return err
 		}
-		cmd.Stderr = os.Stderr
+		if !g.Quiet {
+			cmd.Stderr = os.Stderr
+		}
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
@@ -121,23 +125,7 @@ func (g *GpgCmd) importKeys() error {
 		if g.SecretKeyID == "" {
 			return fmt.Errorf("could not find private key")
 		}
-
-
 		wg.Wait()
-
 	}
-
 	return nil
-}
-
-func DecodePem(pub string) ([]byte, error) {
-	pubblk, _ := pem.Decode([]byte(pub))
-	if pubblk == nil {
-		return nil, fmt.Errorf("could not decode pem block")
-	}
-	// if pubblk.Type != "PRIVATE..." {
-	// return nil, fmt.Errorf("invalid key type")
-	// }
-
-	return pubblk.Bytes, nil
 }
