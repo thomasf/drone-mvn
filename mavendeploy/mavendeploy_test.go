@@ -68,7 +68,7 @@ func TestPublish1(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		l.AssertArtifacts(
+		l.AssertFiles(
 			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip",
 			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.md5",
 			"com/test/publish1/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.sha1",
@@ -135,13 +135,13 @@ func TestPublish2(t *testing.T) {
 				Source: "single/release.zip",
 			},
 		}}
-	l.Run(func(m *Maven) {
 
+	l.Run(func(m *Maven) {
 		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-		l.AssertArtifacts(
+		l.AssertFiles(
 			"com/test/publish2/release/1.2.3/release-1.2.3.pom",
 			"com/test/publish2/release/1.2.3/release-1.2.3.pom.md5",
 			"com/test/publish2/release/1.2.3/release-1.2.3.pom.sha1",
@@ -180,7 +180,7 @@ func TestPublish3(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		l.AssertArtifacts(
+		l.AssertFiles(
 			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip",
 			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip.md5",
 			"com/test/publish3/app/1.2.3/app-1.2.3-windows-amd64.zip.sha1",
@@ -218,12 +218,13 @@ func TestGPGSign1(t *testing.T) {
 				Debug:  true,
 			},
 		}}
+
 	l.Run(func(m *Maven) {
 		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-		l.AssertArtifacts(
+		l.AssertFiles(
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom",
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc",
 			"com/test/publishGpg/release/1.9.3/release-1.9.3.pom.asc.md5",
@@ -292,16 +293,14 @@ func TestGPGSign2(t *testing.T) {
 			Args: Args{
 				Source: "multiple-matched/app-client*",
 				Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*).(?P<extension>tar.gz|zip|readme)$",
-			},
-		}}
+			}}}
 
 	l.Run(func(m *Maven) {
-
 		err := m.Publish()
 		if err != nil {
 			t.Fatal(err)
 		}
-		l.AssertArtifacts(
+		l.AssertFiles(
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc",
 			"com/test/gpg2/app-client/0.1.4/app-client-0.1.4-darwin-amd64.zip.asc.md5",
@@ -366,7 +365,9 @@ func (l *LocalTest) Run(f func(m *Maven)) {
 	f(l.Maven)
 }
 
-func (l *LocalTest) AssertArtifacts(path ...string) {
+// AssertFiles fails the test if the local maven resulting repo doenst
+// contain exactly the files specified by the path arguments.
+func (l *LocalTest) AssertFiles(path ...string) {
 	basepath := strings.TrimPrefix(l.Maven.Repository.URL, "file://")
 
 	var files []string
@@ -397,31 +398,6 @@ func (l *LocalTest) AssertArtifacts(path ...string) {
 		fullpath := filepath.Join(basepath, v)
 		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
 			l.T.Fatalf("no such file or directory: %s", fullpath)
-			return
-		}
-	}
-}
-
-func localTest(mvn *Maven, fn func()) {
-	tmpdir, err := ioutil.TempDir("", "drone-mvn-test")
-	if err != nil {
-		panic(err)
-	}
-	mvn.Repository.URL = fmt.Sprintf("file://%s", tmpdir)
-	defer func() {
-		os.RemoveAll(tmpdir)
-	}()
-	mvn.workspacePath = "test-data/"
-	mvn.quiet = true
-	fn()
-}
-
-func assertLocalArtifacts(t *testing.T, mvn *Maven, path ...string) {
-	basepath := strings.TrimPrefix(mvn.Repository.URL, "file://")
-	for _, v := range path {
-		fullpath := filepath.Join(basepath, v)
-		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
-			t.Fatalf("no such file or directory: %s", fullpath)
 			return
 		}
 	}
