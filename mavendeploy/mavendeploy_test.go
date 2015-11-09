@@ -26,6 +26,7 @@ func TestSkip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		l.AssertNoFiles()
 	})
 }
 
@@ -38,11 +39,13 @@ func TestURL(t *testing.T) {
 			GPG:        GPG{},
 			Args:       Args{},
 		}}
-
-	err := l.Publish()
-	if err == nil || err != errRequiredValue {
-		t.Fatal("url should be required")
-	}
+	l.Run(func(m *Maven) {
+		err := l.Publish()
+		if err == nil && err != errRequiredValue {
+			t.Fatal("url should be required", err.Error())
+		}
+		l.AssertNoFiles()
+	})
 }
 
 func TestPublish1(t *testing.T) {
@@ -272,6 +275,7 @@ func TestGPGSignInvalidPassphrase(t *testing.T) {
 		if err == nil {
 			t.Fatal("had the wrong password")
 		}
+		l.AssertNoFiles()
 	})
 }
 
@@ -368,6 +372,29 @@ func (l *LocalTest) Run(f func(m *Maven)) {
 // AssertFiles fails the test if the local maven resulting repo doenst
 // contain exactly the files specified by the path arguments.
 func (l *LocalTest) AssertFiles(path ...string) {
+	ok, files := l.expectFiles(path...)
+	if !ok {
+		l.T.Fatalf(
+			"unexpected artifact file situation:\n\nfound:\n\n%s\n\nexpected:\n\n%s\n\n",
+			strings.Join(files, "\n"),
+			strings.Join(path, "\n"),
+		)
+	}
+}
+
+// AssertFiles fails the test if the local maven resulting repo doenst
+// contain exactly the files specified by the path arguments.
+func (l *LocalTest) AssertNoFiles() {
+	ok, files := l.expectFiles("")
+	if ok {
+		l.T.Fatalf(
+			"expeced no files, got: \n %s\n\n",
+			strings.Join(files, "\n"),
+		)
+	}
+}
+
+func (l *LocalTest) expectFiles(path ...string) (bool, []string) {
 	basepath := strings.TrimPrefix(l.Maven.Repository.URL, "file://")
 
 	var files []string
@@ -386,21 +413,11 @@ func (l *LocalTest) AssertFiles(path ...string) {
 	}
 	sort.Strings(files)
 	sort.Strings(path)
+	ok := true
 	if !reflect.DeepEqual(files, path) {
-
-		l.T.Fatalf(
-			"unexpected artifact file situation:\n\nfound:\n\n%s\n\nexpected:\n\n%s\n\n",
-			strings.Join(files, "\n"),
-			strings.Join(path, "\n"),
-		)
+		ok = false
 	}
-	for _, v := range path {
-		fullpath := filepath.Join(basepath, v)
-		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
-			l.T.Fatalf("no such file or directory: %s", fullpath)
-			return
-		}
-	}
+	return ok, files
 }
 
 const privateKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
