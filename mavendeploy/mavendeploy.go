@@ -232,6 +232,12 @@ func (mvn *Maven) Prepare() error {
 		if a.ArtifactID == "" {
 			a.ArtifactID = mvn.Artifact.ArtifactID
 		}
+		if a.Classifier == "" {
+			a.Classifier = mvn.Artifact.Classifier
+		}
+		if a.Extension == "" {
+			a.Extension = mvn.Artifact.Extension
+		}
 		return a
 	}
 	for _, v := range parsed {

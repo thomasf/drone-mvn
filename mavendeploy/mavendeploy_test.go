@@ -118,6 +118,60 @@ func TestPublish1(t *testing.T) {
 	})
 }
 
+func TestPublish5(t *testing.T) {
+	l := LocalTest{
+		t,
+		&Maven{
+			Repository: Repository{
+				Username: "u",
+				Password: "p",
+			},
+			Artifact: Artifact{
+				GroupID:    "com.test.publish1",
+				Extension:  "zipext",
+				Classifier: "classifier",
+			},
+			GPG: GPG{},
+			Args: Args{
+				Source: "multiple-matched/app*.zip",
+				Regexp: "(?P<artifact>app-[^/-]*)-(?P<classifier>[^-]*-[^-]*)-(?P<version>.*)$",
+			}}}
+
+	l.Run(func(m *Maven) {
+		// m.quiet = false
+		err := m.Publish()
+		if err != nil {
+			t.Fatal(err)
+		}
+		l.AssertFiles(
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-darwin-amd64.zipext",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-darwin-amd64.zipext.md5",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-darwin-amd64.zipext.sha1",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-windows-386.zipext",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-windows-386.zipext.md5",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-windows-386.zipext.sha1",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-windows-amd64.zipext",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-windows-amd64.zipext.md5",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip-windows-amd64.zipext.sha1",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip.pom",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip.pom.md5",
+			"com/test/publish1/app-client/0.1.4.zip/app-client-0.1.4.zip.pom.sha1",
+			"com/test/publish1/app-client/maven-metadata.xml",
+			"com/test/publish1/app-client/maven-metadata.xml.md5",
+			"com/test/publish1/app-client/maven-metadata.xml.sha1",
+			"com/test/publish1/app-gui/0.1.4.zip/app-gui-0.1.4.zip-darwin-amd64.zipext",
+			"com/test/publish1/app-gui/0.1.4.zip/app-gui-0.1.4.zip-darwin-amd64.zipext.md5",
+			"com/test/publish1/app-gui/0.1.4.zip/app-gui-0.1.4.zip-darwin-amd64.zipext.sha1",
+			"com/test/publish1/app-gui/0.1.4.zip/app-gui-0.1.4.zip.pom",
+			"com/test/publish1/app-gui/0.1.4.zip/app-gui-0.1.4.zip.pom.md5",
+			"com/test/publish1/app-gui/0.1.4.zip/app-gui-0.1.4.zip.pom.sha1",
+			"com/test/publish1/app-gui/maven-metadata.xml",
+			"com/test/publish1/app-gui/maven-metadata.xml.md5",
+			"com/test/publish1/app-gui/maven-metadata.xml.sha1",
+		)
+	})
+}
+
 func TestPublish2(t *testing.T) {
 
 	l := LocalTest{
