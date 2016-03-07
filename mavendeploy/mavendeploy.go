@@ -16,7 +16,7 @@ import (
 
 const (
 	mavenGpg    = "org.apache.maven.plugins:maven-gpg-plugin:1.6:sign-and-deploy-file"
-	mavenDeploy = "org.apache.maven.plugins:maven-deploy-plugin:2.7:deploy-file"
+	mavenDeploy = "org.apache.maven.plugins:maven-deploy-plugin:2.8.2:deploy-file"
 )
 
 // Maven is a composed struct which forms the configration of the drone-mvn
