@@ -5,9 +5,9 @@ from java:8
 
 run mkdir -p /opt \
       && cd /opt \
-      && wget -q http://apache.mirrors.spacedump.net/maven/maven-3/3.3.3/binaries/apache-maven-3.3.3-bin.tar.gz \
-      && tar -xf apache-maven-3.3.3-bin.tar.gz \
-      && ln -s apache-maven-3.3.3 apache-maven
+      && wget -q http://apache.mirrors.spacedump.net/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+      && tar -xf apache-maven-3.3.9-bin.tar.gz \
+      && ln -s apache-maven-3.3.9 apache-maven
 
 env PATH=/opt/apache-maven/bin:$PATH
 
